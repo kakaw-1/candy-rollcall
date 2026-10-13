@@ -1,0 +1,6 @@
+# CandyRollCall 依赖（Windows 打包环境，版本以实机验证为准后锁定）
+# 开发/测试环境（Linux CI）仅需 pytest；openpyxl 可选（xlsx 导入导出）。
+pywebview>=5.0
+openpyxl>=3.1
+pyinstaller>=6.0 ; sys_platform == "win32"
+pytest>=8.0

@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CandyRollCall</title>
+  <link rel="stylesheet" href="src/styles.css">
+</head>
+<body>
+  <div id="loading">正在加载…</div>
+
+  <!-- ============ 点名视图（默认，V2.1 交互精简：仅高频操作） ============ -->
+  <div id="roll-view" class="hidden">
+    <header class="roll-header">
+      <span class="brand">🍬 糖果点名</span>
+      <div class="header-actions">
+        <button id="btn-fullscreen" class="icon-btn" title="全屏">⛶</button>
+        <button id="btn-more" class="icon-btn" title="更多">⋯</button>
+        <button id="btn-collapse" class="icon-btn" title="收起到悬浮球">—</button>
+      </div>
+    </header>
+
+    <!-- “更多”菜单：退出及次级操作（§4.3） -->
+    <div id="more-menu" class="menu hidden">
+      <button id="btn-manage" class="menu-item">📋 管理名单</button>
+      <button id="btn-quit" class="menu-item danger">✕ 退出工具</button>
+    </div>
+
+    <main id="stage" class="stage">
+      <!-- EMPTY 状态 -->
+      <div id="empty-state" class="state-panel hidden">
+        <div class="empty-emoji">学堂</div>
+        <p>还没有学生名单</p>
+        <button id="btn-empty-manage" class="primary-btn">添加名单</button>
+      </div>
+
+      <!-- IDLE 待机卡片 -->
+      <div id="idle-state" class="state-panel hidden">
+        <div class="card idle-card"><div class="idle-face">？</div></div>
+      </div>
+
+      <!-- ANIMATING / REVEALING / RESULT 卡片容器 -->
+      <div id="cards" class="cards"></div>
+
+      <!-- ROUND_COMPLETE 提示条 -->
+      <div id="round-complete" class="round-banner hidden">
+        全班同学都被点到啦！🎉
+      </div>
+    </main>
+
+    <footer class="roll-footer">
+      <div class="controls-row">
+        <!-- 抽取人数 1~5（仅点名主页，§2） -->
+        <div id="count-picker" class="count-picker" title="抽取人数"></div>
+        <!-- 模式切换 -->
+        <button id="btn-mode" class="mode-btn" title="切换模式">🔁 不重复</button>
+        <!-- 剩余人数 -->
+        <span id="remaining" class="remaining"></span>
+      </div>
+      <div class="action-row">
+        <button id="btn-start" class="primary-btn big">开始点名</button>
+        <button id="btn-reveal-now" class="reveal-btn hidden">⚡ 立即揭晓</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ============ 管理视图（独立按需窗口，?view=manage） ============ -->
+  <div id="manage-view" class="hidden">
+    <header class="manage-header">
+      <h2>📋 名单管理</h2>
+      <span id="manage-count" class="badge"></span>
+      <div class="flex-spacer"></div>
+      <button id="btn-close-manage" class="primary-btn">返回点名</button>
+    </header>
+
+    <nav class="manage-tabs">
+      <button class="tab active" data-tab="list">名单编辑</button>
+      <button class="tab" data-tab="tools">更多工具</button>
+      <button class="tab" data-tab="settings">设置与维护</button>
+    </nav>
+
+    <!-- Tab 1: 名单编辑（高频：添加/编辑/删除/批量粘贴/导入，§8.1） -->
+    <section id="tab-list" class="tab-panel">
+      <div class="toolbar">
+        <input id="inp-name" placeholder="姓名（必填）" maxlength="50">
+        <input id="inp-no" placeholder="学号（可选）" maxlength="20">
+        <button id="btn-add" class="primary-btn">添加</button>
+      </div>
+      <div class="toolbar">
+        <button id="btn-paste" class="ghost-btn">📋 批量粘贴</button>
+        <button id="btn-import" class="ghost-btn">📂 导入 Excel/CSV</button>
+        <span id="dup-hint" class="hint"></span>
+      </div>
+
+      <!-- 批量粘贴面板 -->
+      <div id="paste-panel" class="panel hidden">
+        <textarea id="paste-area" rows="6" placeholder="每行一个姓名，或“学号 姓名”两列（制表符/逗号/空格分隔）&#10;示例：&#10;08  张小明&#10;张小明,09"></textarea>
+        <div class="panel-actions">
+          <button id="btn-paste-preview" class="primary-btn">预览</button>
+          <button id="btn-paste-cancel" class="ghost-btn">取消</button>
+        </div>
+      </div>
+
+      <!-- 导入预览面板 -->
+      <div id="import-panel" class="panel hidden">
+        <h3>导入预览</h3>
+        <div id="import-summary" class="import-summary"></div>
+        <div id="import-issues" class="import-issues"></div>
+        <div class="strategy-row">
+          <label><input type="radio" name="strategy" value="replace"> 替换原名单</label>
+          <label><input type="radio" name="strategy" value="append" checked> 追加到原名单</label>
+        </div>
+        <div class="panel-actions">
+          <button id="btn-import-commit" class="primary-btn">确认导入</button>
+          <button id="btn-import-cancel" class="ghost-btn">取消</button>
+        </div>
+      </div>
+
+      <!-- 名单表 -->
+      <div id="student-list" class="student-list"></div>
+    </section>
+
+    <!-- Tab 2: 更多工具（低频：导出/备份恢复，§8.1） -->
+    <section id="tab-tools" class="tab-panel hidden">
+      <h3>数据维护</h3>
+      <div class="tool-group">
+        <button id="btn-export-xlsx" class="ghost-btn">📤 导出名单 (.xlsx)</button>
+        <button id="btn-export-csv" class="ghost-btn">📤 导出名单 (.csv)</button>
+      </div>
+      <div class="tool-group">
+        <button id="btn-backup" class="ghost-btn">💾 完整备份 (JSON)</button>
+        <button id="btn-restore" class="ghost-btn">📥 恢复备份…</button>
+      </div>
+      <div id="restore-panel" class="panel hidden">
+        <h3>恢复预览</h3>
+        <div id="restore-summary" class="import-summary"></div>
+        <label id="restore-sww-row" class="hidden">
+          <input type="checkbox" id="restore-sww"> 备份包含“开机自启”，一并开启（需确认）
+        </label>
+        <div class="panel-actions">
+          <button id="btn-restore-commit" class="primary-btn">确认恢复（替换并重置本轮）</button>
+          <button id="btn-restore-cancel" class="ghost-btn">取消</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 3: 设置与维护（高级，§8.1） -->
+    <section id="tab-settings" class="tab-panel hidden">
+      <h3>基础动画时长</h3>
+      <div class="setting-row">
+        <input type="range" id="set-anim" min="2" max="8" step="1" value="4">
+        <span id="set-anim-val">4 秒</span>
+      </div>
+      <h3>系统偏好</h3>
+      <label class="setting-row">
+        <input type="checkbox" id="set-snap"> 悬浮球自动吸附左右边缘
+      </label>
+      <label class="setting-row">
+        <input type="checkbox" id="set-sww"> 开机自动启动（仅当前用户）
+      </label>
+      <h3>维护</h3>
+      <div class="tool-group">
+        <button id="btn-reset-round" class="ghost-btn">🔄 重置本轮点名</button>
+      </div>
+      <p class="hint">抽取人数请在点名主页修改，此处不重复提供。</p>
+    </section>
+  </div>
+
+  <!-- 通用确认对话框 -->
+  <div id="confirm-mask" class="confirm-mask hidden">
+    <div class="confirm-box">
+      <p id="confirm-text"></p>
+      <div class="panel-actions">
+        <button id="confirm-ok" class="primary-btn">确认</button>
+        <button id="confirm-cancel" class="ghost-btn">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="src/main.js"></script>
+</body>
+</html>
