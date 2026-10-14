@@ -28,3 +28,6 @@ logs/
 .idea/
 .DS_Store
 Thumbs.db
+
+# 截图工装产物（可随时用 tools/screenshot/shoot.mjs 重新生成）
+tools/screenshot/out/

@@ -143,6 +143,8 @@ function renderRoll(snap) {
   const st = draw.state;
   $("empty-state").classList.toggle("hidden", st !== "EMPTY");
   $("idle-state").classList.toggle("hidden", st !== "IDLE");
+  // 空名单/待机时隐藏卡片容器：它带 width:100%，留着会把待机卡挤到左侧
+  $("cards").classList.toggle("hidden", st === "EMPTY" || st === "IDLE");
   $("round-complete").classList.toggle("hidden", !draw.roundComplete || st !== "ROUND_COMPLETE");
 
   // “立即揭晓”仅 ANIMATING / REVEALING 显示（V2.1）
@@ -199,6 +201,9 @@ async function startDraw() {
     return;
   }
   beginAnimation(r);
+  // 立即同步状态：隐藏待机卡、显示“立即揭晓”、禁用设置（§6.2 动画中约束）
+  App.snapshot = { ...App.snapshot, draw: r.state };
+  renderRoll(App.snapshot);
 }
 
 function beginAnimation(result) {
@@ -222,6 +227,7 @@ function beginAnimation(result) {
 
 function buildCards(students, rolling) {
   const box = $("cards");
+  box.classList.remove("hidden");
   box.innerHTML = "";
   box.classList.toggle("grid", students.length >= 3);
   students.forEach((s) => {
